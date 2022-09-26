@@ -52,8 +52,8 @@ The computation result of the second process is u3 * v3 + u4 * v4 ==> c2
 First process will calculate dot product for the even components
 Second process will calculate dot product for the odd components
 
-The computation result of the first process is u1 * v1 + u3 * v3 ==> c1
-The computation result of the second process is u2 * v2 + u4 * v4 ==> c2
+The computation result of the first process is u2 * v2 + u4 * v4 ==> c1
+The computation result of the second process is u1 * v1 + u3 * v3 ==> c2
 
 
 
