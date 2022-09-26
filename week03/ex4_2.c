@@ -2,18 +2,19 @@
 #include <stdlib.h>
 #include <math.h>
 
-
 /*
-This approach is good since it provides extensibility for more operations of aggregate function and it also provides a solution for non-associative operations like the mean and geometric mean.
-For each element, we perform only one operation on the int/floating-point numbers (addition) and for the final result we just perform one operation (division).
-
-Non-assoicative operation can be converted to some another associative function with an additional final operation special for the non-associative operation and applied on the output of the intermediate stage.
-We can divide the operation into 2 stages.
-	1. Intermediate stage which applies the associative operation on the n elements.
-	2. Final stage which applies the output function on the result of the previous stage.
+This approach is also good since it provides better extensibility for more operations of aggregate function following the open-closed principle but for each element, we need to perform 3 operations on the float-point numbers (multiplication, then addition, then division) and this may affect the precision of the result.
 */
 
 void* aggregate(void* base, size_t size, int n, void* initial_value, void* (*opr)(const void*, const void*));
+
+
+// A struct for the mean operation and capable of holding two values 
+// The  temp_mean is the mean value for n elements
+typedef struct Mean{
+	double temp_mean;
+	int n;
+} Mean;
 
 // Applies the addition operation on two elements
 void* addInt(const void* a, const void* b){
@@ -42,71 +43,27 @@ void* mulDouble(const void* a, const void* b){
         *output = (*((double*)a) * *((double*)b));
         return output;
 }
+
 // Applies the arithmetic mean operation on two elements
 void* meanInt(const void* a, const void* b){
-	double* output = malloc(sizeof(double));
-	*output = (*((int*)a) + *((int*)b))/2.0;
-	return output;
+        Mean* mean = (Mean*)a;
+        mean->temp_mean = mean->temp_mean * mean->n + *((int*) b);
+        mean->n++;
+        double sum = mean->temp_mean;
+        mean->temp_mean = sum / mean->n;
+        return mean;
 }
 
 // Applies the arithmetic mean operation on two elements
 void* meanDouble(const void* a, const void* b){
-        double* output = malloc(sizeof(double));
-        *output = (*((double*)a) + *((double*)b))/2.0;
-        return output;
+        Mean* mean = (Mean*)a;
+        mean->temp_mean = mean->temp_mean * mean->n + *(double*) b;
+        mean->n++;
+        double sum = mean->temp_mean;
+        mean->temp_mean = sum / mean->n;
+        return mean;
 }
 
-
-// Applies the output function sum/n for mean ints
-void* intMeanOutputFunc(const void* a, const void* b){
-	int* n = (int*) b;
-	int* result = (int*) a;
-	
-	double* output = malloc(sizeof(double));
-	*output = (double)*result / (double)*n;
-	
-	return output;
-}
-
-// Applies the output function sum/n for mean doubles
-void* doubleMeanOutputFunc(const void* a, const void* b){
-	int* n = (int*) b;
-	double* result = (double*) a;
-	*result = *result / *n;
-	
-	return result;
-}
-
-
-// provides aggregation capability for nonassociative operations like mean and geometric mean
-// It accepts the associative function and the output function
-void* nonassociativeAggregate(void* base, size_t size, int n, void* initial_value, void* (*associative_agg_fun) (const void*, const void*), void* (*output_func)(const void*, const void*), void* output_func_param){
-
-	if (n<2 || base==NULL){
-		return base;
-	}
-	
-	void* result = aggregate(base, size, n, initial_value, associative_agg_fun);
-
-	if (result == NULL) return NULL;
-	
-	result = output_func(result, output_func_param);
-
-	return result;
-}
-
-
-// checks the special conditions for aggregate functions
-void* checkSpecialConds(void* base, size_t size, int n, void* initial_value, void* (*opr)(const void*, const void*)){
-
-	if (opr==meanInt){
-		return nonassociativeAggregate(base, size, n, initial_value, &addInt, &intMeanOutputFunc, &n);
-	}else if (opr==meanDouble){
-		return nonassociativeAggregate(base, size, n, initial_value, &addDouble, &doubleMeanOutputFunc, &n);
-	}
-	
-	return NULL;
-}
 
 // Applies the aggregation operation opr on n elements
 void* aggregate(void* base, size_t size, int n, void* initial_value, void* (*opr)(const void*, const void*)){
@@ -119,10 +76,7 @@ void* aggregate(void* base, size_t size, int n, void* initial_value, void* (*opr
 		return base;
 	}
 
-	void* output = checkSpecialConds(base, size, n, initial_value, opr);
-	if (output) return output;
-
-	output = initial_value;
+	void* output = initial_value;
 
 	for (int i=0; i<n; i++){
 		output = opr(output, base + size * i);
@@ -130,6 +84,8 @@ void* aggregate(void* base, size_t size, int n, void* initial_value, void* (*opr
 
 	return output;
 }
+
+
 
 // Main function
 int main(){
@@ -187,15 +143,20 @@ int main(){
 
 	double* result2m = (double*)aggregate(arr2, sizeof(double), n2, init4, mulDouble);
         printf("Multiplication(doubles) = %.2f\n", *result2m);
+        
+        Mean* initMeanInt = malloc(sizeof(Mean));
+        initMeanInt->temp_mean = 0.0;
+        initMeanInt->n = 0;
+        Mean* initMeanDouble = malloc(sizeof(Mean));
+        initMeanDouble->temp_mean = 0.0;
+        initMeanDouble->n = 0;
 
 	// Arithmetic Mean
-        double* result1mean = (double*)aggregate(arr, sizeof(int), n, init1, meanInt);
+        double* result1mean = (double*)aggregate(arr, sizeof(int), n, initMeanInt, meanInt);
         printf("Mean(ints) = %.2f\n", *result1mean);
 
-	double* result2mean = (double*)aggregate(arr2, sizeof(double), n2, init3, meanDouble);
+	double* result2mean = (double*)aggregate(arr2, sizeof(double), n2, initMeanDouble, meanDouble);
         printf("Mean(doubles) = %.2f\n", *result2mean);
-
-
 
         // Free pointers
         free(arr);free(arr2);free(init1);free(init4);free(init2);free(init3);
