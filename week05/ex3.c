@@ -40,7 +40,7 @@ void *prime_counter(void *arg)
 int main(int argc, char *argv[])
 {
   int n = atoi(argv[1]), n_threads = atoi(argv[2]);
-  int segment_size = n / n_threads + (n % n_threads == 0 ? 0 : 1);
+  int segment_size = n / n_threads;
 
   pthread_t *threads = malloc(n_threads * sizeof(pthread_t));
 
