@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
   {
     /*
       TODO
-      Complete this loop. You shall spawn <n_threads> threads, each of which computes the number of primes in a segment of length <segment_size>. The union of those intervals shall correspond to the interval [1, n).
+      Complete this loop. You shall spawn <n_threads> threads, each of which computes the number of primes in a segment of length <segment_size>. The union of those intervals shall correspond to the interval [0, n).
 
       First, initialize the value of requests[i] with a simple mathematical computation. Be careful not to overrun the last interval.
 
